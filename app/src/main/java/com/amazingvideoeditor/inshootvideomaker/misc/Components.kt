@@ -148,7 +148,7 @@ fun DropdownSetting(
         onExpandedChange = { expanded = !expanded },
     ) {
         TextField(
-            modifier = Modifier.exposedDropdownSize(),
+            modifier = Modifier.menuAnchor(),
             readOnly = true,
             value = selectedOptionText,
             onValueChange = {},

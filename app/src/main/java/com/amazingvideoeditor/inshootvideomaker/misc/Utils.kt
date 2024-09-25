@@ -1,6 +1,5 @@
 package com.amazingvideoeditor.inshootvideomaker.misc
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Paint
@@ -79,7 +78,6 @@ fun ComponentActivity.setImmersiveMode(enabled: Boolean) {
     }
 }
 
-@SuppressLint("DefaultLocale")
 fun Long.formatMinSec(): String {
     return if (this == 0L) {
         "00:00"

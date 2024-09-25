@@ -15,23 +15,23 @@ import com.amazingvideoeditor.inshootvideomaker.videomaker.InShootVideoMakerActi
 class MainActivity : ComponentActivity() {
     private lateinit var pickMedia: ActivityResultLauncher<PickVisualMediaRequest>
     private lateinit var pickProject: ActivityResultLauncher<Array<String>>
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setupSystemUi()
 
         val dataStore = SettingsDataStore(this)
         pickMedia =
             registerForActivityResult(CustomPickVisualMedia { dataStore.getLegacyFilePickerBlocking() }) { uri ->
                 if (uri != null) {
-                    gotoVideoEditor(uri)
+                    launchVideoEditor(uri)
                 }
             }
         pickProject = registerForActivityResult(
             CustomOpenDocument()
         ) { uri ->
             if (uri != null) {
-                gotoVideoEditor(uri)
+                launchVideoEditor(uri)
             }
         }
 
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun gotoVideoEditor(uri: Uri) {
+    private fun launchVideoEditor(uri: Uri) {
         val intent = Intent(this, InShootVideoMakerActivity::class.java)
         intent.action = Intent.ACTION_EDIT
         intent.data = uri

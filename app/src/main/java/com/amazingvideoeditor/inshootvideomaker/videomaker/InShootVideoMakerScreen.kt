@@ -2,11 +2,13 @@ package com.amazingvideoeditor.inshootvideomaker.videomaker
 
 import android.app.Activity
 import android.content.Intent
+import android.media.MediaScannerConnection
 import android.os.Handler
 import android.os.Looper.getMainLooper
 import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -73,7 +75,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -82,7 +83,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -137,7 +137,6 @@ import kotlinx.coroutines.launch
 fun VideoEditorScreen(
     uri: String,
     createDocument: ActivityResultLauncher<String>,
-    createProject: ActivityResultLauncher<String>,
     requestVideoPermission: ActivityResultLauncher<String>
 ) {
     val viewModel = viewModel { InShootVideoMakerViewModel() }
@@ -330,7 +329,6 @@ fun VideoEditorScreen(
                     title = { getFileNameFromUri(context, uri.toUri()) },
                     transformManager = transformManager,
                     createDocument = createDocument,
-                    createProject = createProject,
                     playbackState = { playbackState },
                     onReplayClick = { player.seekBack() },
                     onForwardClick = { player.seekForward() },
@@ -387,7 +385,6 @@ private fun PlayerControls(
     title: () -> String,
     transformManager: TransformManager,
     createDocument: ActivityResultLauncher<String>,
-    createProject: ActivityResultLauncher<String>,
     onReplayClick: () -> Unit,
     onForwardClick: () -> Unit,
     onPauseToggle: () -> Unit,
@@ -400,8 +397,7 @@ private fun PlayerControls(
     onSeekChanged: (timeMs: Float) -> Unit
 ) {
 
-    // val visible = remember(isVisible()) { isVisible() }
-    val visible by rememberUpdatedState(newValue = isVisible())
+    val visible = remember(isVisible()) { isVisible() }
 
     AnimatedVisibility(
         modifier = modifier,
@@ -427,8 +423,7 @@ private fun PlayerControls(
                         .fillMaxWidth(),
                     title = title,
                     transformManager = transformManager,
-                    createDocument = createDocument,
-                    createProject = createProject
+                    createDocument = createDocument
                 )
 
                 CenterControls(
@@ -479,16 +474,14 @@ private fun TopControls(
     modifier: Modifier = Modifier,
     title: () -> String,
     transformManager: TransformManager,
-    createDocument: ActivityResultLauncher<String>,
-    createProject: ActivityResultLauncher<String>
+    createDocument: ActivityResultLauncher<String>
 ) {
     val activity = LocalContext.current as Activity
-    val viewModel: InShootVideoMakerViewModel = viewModel()
+    val viewModel = viewModel { InShootVideoMakerViewModel() }
     val projectOutputPath by viewModel.projectOutputPath.collectAsState()
-    val projectSavingSupported by viewModel.projectSavingSupported.collectAsState()
-    val videoTitle = title()
+    val videoTitle = remember(title()) { title() }
     var showThreeDotMenu by remember { mutableStateOf(false) }
-    var showExportDialog by remember { mutableStateOf(false) }
+    var showExportDialog by rememberSaveable { mutableStateOf(false) }
 
     Row(
         modifier = modifier.padding(top = 16.dp),
@@ -538,13 +531,9 @@ private fun TopControls(
     }
 
     if (showExportDialog) {
-        ExportDialog(
-            transformManager = transformManager,
-            createDocument = createDocument,
-            title = videoTitle, // Assuming videoTitle should be used as the title
-            activity = activity,
-            onDismissRequest = { showExportDialog = false } // Adjust parameter name
-        )
+        ExportDialog(transformManager, createDocument, videoTitle, activity) {
+            showExportDialog = false
+        }
     }
 }
 
@@ -873,7 +862,6 @@ private fun LayerDrawer(transformManager: TransformManager) {
                     }
                 )
             }
-
             val trim = transformManager.getMergedTrim()
             if (trim != null) {
                 item()
@@ -933,6 +921,7 @@ private fun LayerDrawerItem(
 @Composable
 private fun FilterDrawer(transformManager: TransformManager, onDismissRequest: () -> Unit) {
     val viewModel = viewModel { InShootVideoMakerViewModel() }
+    val context = LocalContext.current
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             stringResource(R.string.video_filters),
@@ -962,7 +951,15 @@ private fun FilterDrawer(transformManager: TransformManager, onDismissRequest: (
                     FilterDrawerItem(
                         stringResId,
                         icon(),
-                        onClick = { transformManager.addVideoEffect(this) }
+                        onClick = {
+                            transformManager.addVideoEffect(this)
+                            Toast.makeText(
+                                context,
+                                "Effect applied successfully",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onDismissRequest()
+                        }
                     )
                 }
             }
@@ -975,18 +972,6 @@ private fun FilterDrawer(transformManager: TransformManager, onDismissRequest: (
                         transformManager,
                         callback
                     )
-                }
-            }
-            items(onVideoUserEffectsArray) { onVideoUserEffect ->
-                onVideoUserEffect.run {
-                    FilterDrawerItem(stringResId, icon()) {
-                        callback = {
-                            transformManager.addVideoEffect(UserEffect(stringResId, icon, it))
-                        }
-                        viewModel.setCurrentEditingEffect(this)
-                        onDismissRequest()
-                        viewModel.setControlsVisible(false)
-                    }
                 }
             }
         }
@@ -1071,14 +1056,14 @@ private fun FilterDialog(
         },
     ) {
         for (arg in args) {
-            val textField = arg.textFieldValidation
+            val textfield = arg.textfieldValidation
             val dropdown = arg.dropdownOptions
-            if (textField != null) {
+            if (textfield != null) {
                 item {
                     TextfieldSetting(
                         name = stringResource(arg.stringResId),
                         onValueChanged = {
-                            val error = textField(it)
+                            val error = textfield(it)
                             if (error.isEmpty()) {
                                 arg.selection = it
                             } else {
@@ -1111,62 +1096,51 @@ private fun ExportDialog(
     activity: Activity,
     onDismissRequest: () -> Unit
 ) {
+    val viewModel = viewModel { InShootVideoMakerViewModel() }
+    val outputPath by viewModel.outputPath.collectAsState()
+    var isExporting by rememberSaveable { mutableStateOf(false) }
+    val exportDismissRequest = {
+        isExporting = false
+        onDismissRequest()
+        viewModel.setOutputPath("")
+        activity.recreate()
+    }
+    if (isExporting) {
+        ExportProgressDialog(transformManager, outputPath) { exportDismissRequest() }
+        return
+    }
     val context = LocalContext.current
     val exportSettings: ExportSettings by remember { mutableStateOf(ExportSettings()) }
-    val viewModel: InShootVideoMakerViewModel = viewModel()
-    val outputPath by viewModel.outputPath.collectAsState()
-    var exportString by remember { mutableStateOf<String?>(null) }
+    var exportString: String? by remember { mutableStateOf(null) }
     var infoDialogText by remember { mutableStateOf("") }
-    var showProgressDialog by remember { mutableStateOf(false) }
-
-    // Effect to handle export process
-    LaunchedEffect(outputPath) {
-        if (outputPath.isNotEmpty() && !showProgressDialog) {
-            showProgressDialog = true
-            exportSettings.outputPath = outputPath
-
-            val transformerListener: Listener = object : Listener {
-                override fun onError(
-                    composition: Composition, result: ExportResult,
-                    exception: ExportException
-                ) {
-                    exportString = exception.toString()
-                }
+    if (outputPath.isNotEmpty()) {
+        exportSettings.outputPath = outputPath
+        if (exportString != null) {
+            ExportFailedAlertDialog(exportString!!) {
+                exportString = null; exportDismissRequest()
             }
-
-            val onFFMPEGError: () -> Unit = {
+        } else {
+            val transformerListener: Listener =
+                object : Listener {
+                    override fun onError(
+                        composition: Composition, result: ExportResult,
+                        exception: ExportException
+                    ) {
+                        exportString = exception.toString()
+                    }
+                }
+            val onFFmpegError: () -> Unit = {
                 exportString = context.getString(R.string.ffmpeg_error)
             }
-
             transformManager.export(
                 context,
                 exportSettings,
                 transformerListener,
-                onFFMPEGError
+                onFFmpegError
             )
+            isExporting = true
         }
-    }
-
-    // Handle progress dialog
-    if (showProgressDialog) {
-        ExportProgressDialog(transformManager) {
-            showProgressDialog = false
-            viewModel.setOutputPath("")
-            activity.recreate()
-            onDismissRequest()
-        }
-    }
-
-    // Handle export failed dialog
-    if (exportString != null) {
-        ExportFailedAlertDialog(exportString!!) {
-            exportString = null
-            onDismissRequest()
-        }
-    }
-
-    // Handle ListDialog for initial settings
-    if (outputPath.isEmpty()) {
+    } else {
         ListDialog(
             title = stringResource(R.string.export),
             dismissText = stringResource(R.string.cancel),
@@ -1176,7 +1150,7 @@ private fun ExportDialog(
                 val dotIndex: Int = title.lastIndexOf('.')
                 val fileName: String = title.substring(0, dotIndex)
                 createDocument.launch(fileName)
-            }
+            },
         ) {
             item {
                 DropdownSetting(
@@ -1231,15 +1205,17 @@ private fun ExportDialog(
                 ) {
                     var errorMsg = validateUFloatAndNonzero(it)
                     if (errorMsg.isEmpty()) {
-                        val frameRate = it.toFloat()
-                        val originalFrameRate = transformManager.player.videoFormat?.frameRate
-                        if (originalFrameRate != null && frameRate >= originalFrameRate) {
-                            errorMsg = context.getString(R.string.frame_rate_must_lower) + "($originalFrameRate)."
+                        val framerate = it.toFloat()
+                        val originalFramerate =
+                            transformManager.player.videoFormat?.frameRate
+                        if (originalFramerate != null && framerate >= originalFramerate) {
+                            errorMsg =
+                                context.getString(R.string.frame_rate_must_lower) + "($originalFramerate)."
                         } else {
-                            exportSettings.frameRate = frameRate
+                            exportSettings.framerate = framerate
                         }
                     } else {
-                        exportSettings.frameRate = 0F
+                        exportSettings.framerate = 0F
                     }
                     errorMsg
                 }
@@ -1252,23 +1228,26 @@ private fun ExportDialog(
                 ) {
                     exportSettings.losslessCut = it
                     if (it) {
-                        infoDialogText = context.getString(R.string.enabling_lossless_cut_will_only_export_trims)
+                        infoDialogText =
+                            context.getString(R.string.enabling_lossless_cut_will_only_export_trims)
                     }
                 }
             }
         }
-
         if (infoDialogText.isNotEmpty()) {
             AlertDialog(
                 title = { Text(stringResource(R.string.setting_info)) },
                 text = { Text(infoDialogText) },
                 onDismissRequest = { infoDialogText = "" },
                 confirmButton = {
-                    TextButton(onClick = { infoDialogText = "" }) {
+                    TextButton(
+                        onClick = {
+                            infoDialogText = ""
+                        }
+                    ) {
                         Text(stringResource(R.string.dismiss))
                     }
-                }
-            )
+                })
         }
     }
 }
@@ -1276,9 +1255,11 @@ private fun ExportDialog(
 @Composable
 fun ExportProgressDialog(
     transformManager: TransformManager,
+    outputPath: String,
     onDismissRequest: () -> Unit
 ) {
-    var exportProgress by remember { mutableFloatStateOf(0F) }
+    val context = LocalContext.current
+    var exportProgress by rememberSaveable { mutableFloatStateOf(0F) }
     val animatedProgress = animateFloatAsState(
         targetValue = exportProgress,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
@@ -1292,6 +1273,13 @@ fun ExportProgressDialog(
                 exportProgress = transformManager.getProgress()
                 if (exportProgress != 1F && exportProgress != -1F) {
                     progressHandler.postDelayed(this, REFRESH_RATE)
+                }
+
+                if (exportComplete) {
+                    MediaScannerConnection.scanFile(
+                        context, arrayOf(outputPath),
+                        null
+                    ) { _, _ -> }
                 }
             }
         }, REFRESH_RATE

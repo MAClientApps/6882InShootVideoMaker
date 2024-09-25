@@ -52,7 +52,7 @@ typealias Editor = @Composable (MutableStateFlow<EffectConstructor?>) -> Unit
 class EffectDialogSetting(
     val key: String,
     val stringResId: Int,
-    val textFieldValidation: ((String) -> String)? = null,
+    val textfieldValidation: ((String) -> String)? = null,
     val dropdownOptions: MutableList<String>? = null
 ) {
     var selection = ""
@@ -64,7 +64,7 @@ class ExportSettings {
     var hdrMode: Int = HDR_MODE_KEEP_HDR
     var audioMimeType: String? = null
     var videoMimeType: String? = null
-    var frameRate: Float = 0F
+    var framerate: Float = 0F
     var speed: Float = 0F
     var outputPath: String = ""
     var losslessCut: Boolean = false
@@ -371,7 +371,6 @@ class TransformManager {
     }
 
     private fun updateAudioProcessors() {
-        // TODO
     }
 
     private fun rebuildMediaTrims() {
@@ -431,7 +430,7 @@ class TransformManager {
         context: Context,
         exportSettings: ExportSettings,
         transformerListener: Transformer.Listener,
-        onFFMPEGError: () -> Unit
+        onFFmpegError: () -> Unit
     ) {
         // exportSettings.log()
         player.release()
@@ -439,7 +438,7 @@ class TransformManager {
         if (exportSettings.losslessCut) {
             val trim = getMergedTrim()
             if (trim != null) {
-                ffmpegLosslessCut(context, trim, outputPath, false, onFFMPEGError)
+                ffmpegLosslessCut(context, trim, outputPath, false, onFFmpegError)
             }
         } else {
             val fd =
@@ -452,8 +451,8 @@ class TransformManager {
                 if (exportSettings.speed > 0) {
                     add(SpeedChangeEffect(exportSettings.speed))
                 }
-                if (exportSettings.frameRate > 0) {
-                    add(FrameDropEffect.createDefaultFrameDropEffect(exportSettings.frameRate))
+                if (exportSettings.framerate > 0) {
+                    add(FrameDropEffect.createDefaultFrameDropEffect(exportSettings.framerate))
                 }
             }
             val editedMediaItem = EditedMediaItem.Builder(trimmedMedia)

@@ -22,7 +22,8 @@ class CustomPickVisualMedia(private val useLegacyFilePicker: () -> Boolean) :
                 type = getVisualMimeType(input.mediaType)
 
                 if (type == null) {
-
+                    // ACTION_OPEN_DOCUMENT requires to set this parameter when launching the
+                    // intent with multiple mime types
                     type = "*/*"
                     putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
                 }

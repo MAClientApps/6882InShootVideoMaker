@@ -2,11 +2,9 @@ package com.amazingvideoeditor.inshootvideomaker.videomaker
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Filter
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.InvertColors
-import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.Tv
 import androidx.media3.effect.Presentation
 import androidx.media3.effect.RgbFilter
@@ -15,7 +13,6 @@ import com.amazingvideoeditor.inshootvideomaker.R
 import com.amazingvideoeditor.inshootvideomaker.misc.validateFloat
 import com.amazingvideoeditor.inshootvideomaker.misc.validateFloatAndNonzero
 import com.amazingvideoeditor.inshootvideomaker.misc.validateUIntAndNonzero
-
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -33,11 +30,11 @@ val dialogUserEffectsArray: ImmutableList<DialogUserEffect> = persistentListOf(
         R.string.resolution,
         { Icons.Filled.Tv },
         persistentListOf(
-            EffectDialogSetting(key = "Width", R.string.width, textFieldValidation = {
+            EffectDialogSetting(key = "Width", R.string.width, textfieldValidation = {
                 validateUIntAndNonzero(it)
             }
             ),
-            EffectDialogSetting(key = "Height", R.string.height, textFieldValidation =
+            EffectDialogSetting(key = "Height", R.string.height, textfieldValidation =
             {
                 validateUIntAndNonzero(it)
             }
@@ -66,11 +63,11 @@ val dialogUserEffectsArray: ImmutableList<DialogUserEffect> = persistentListOf(
         R.string.scale,
         { Icons.Filled.FormatSize },
         persistentListOf(
-            EffectDialogSetting(key = "X", R.string.x, textFieldValidation = {
+            EffectDialogSetting(key = "X", R.string.x, textfieldValidation = {
                 validateFloatAndNonzero(it)
             }
             ),
-            EffectDialogSetting(key = "Y", R.string.y, textFieldValidation =
+            EffectDialogSetting(key = "Y", R.string.y, textfieldValidation =
             {
                 validateFloatAndNonzero(it)
             }
@@ -88,7 +85,7 @@ val dialogUserEffectsArray: ImmutableList<DialogUserEffect> = persistentListOf(
             EffectDialogSetting(
                 key = "Degrees",
                 stringResId = R.string.degrees,
-                textFieldValidation = {
+                textfieldValidation = {
                     validateFloat(it)
                 }
             )
@@ -99,13 +96,3 @@ val dialogUserEffectsArray: ImmutableList<DialogUserEffect> = persistentListOf(
     }
 )
 
-val onVideoUserEffectsArray: ImmutableList<OnVideoUserEffect> = persistentListOf(
-    OnVideoUserEffect(
-        R.string.text,
-        { Icons.Filled.TextFormat }
-    ) { TextEditor(it) },
-    OnVideoUserEffect(
-        R.string.crop,
-        { Icons.Filled.Crop }
-    ) { CropEditor(it) }
-)
